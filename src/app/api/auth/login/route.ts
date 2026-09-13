@@ -6,15 +6,11 @@ import { eq } from "drizzle-orm";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    let loginIdentifier = (body.username || body.email || "").trim();
+    const loginIdentifier = (body.username || body.email || "").trim();
     const password = body.password;
 
     if (!loginIdentifier || !password) {
       return NextResponse.json({ error: "Credentials missing" }, { status: 400 });
-    }
-
-    if (loginIdentifier.includes("@")) {
-      loginIdentifier = loginIdentifier.split("@")[0];
     }
 
     const [user] = await db
@@ -44,10 +40,6 @@ export async function POST(request: Request) {
     return response;
   } catch (error: any) {
     console.error("Login route failure:", error);
-    // Expose error temporarily to diagnose database / connection issues
-    return NextResponse.json(
-      { error: error?.message || "Internal server error" }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
