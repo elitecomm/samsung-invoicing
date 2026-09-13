@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth"; // Adjust path to your auth config
 import { db } from "@/db";
-import { invoices, payments, invoiceItems } from "@/db/schema";
-import { sql, eq, gte, lte, and } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { invoices } from "@/db/schema";
+import { sql, gte, lte, and } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
-    // Await cookies() for modern Next.js App Router compatibility
-    const cookieStore = await cookies();
-    const userRole = cookieStore.get("user_role")?.value;
+    // 1. Authenticate using NextAuth server session
+    const session = await getServerSession(authOptions);
 
-    if (!userRole) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Access user role from session directly
+    const userRole = session.user.role;
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "today"; // today, week, month, year, all
@@ -87,7 +90,7 @@ export async function GET(request: Request) {
       .orderBy(sql`${invoices.createdAt} DESC`)
       .limit(5);
 
-    // Daily revenue for chart (last 7 or 30 days)
+    // Daily revenue for chart
     const chartDays = period === "year" ? 30 : period === "month" ? 30 : 7;
     const chartStart = new Date(now.getTime() - chartDays * 24 * 60 * 60 * 1000);
     const dailyRevenue = await db
@@ -103,6 +106,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       period,
+      userRole,
       totalInvoices: totalInvoicesResult?.count || 0,
       totalRevenue: parseFloat(revenueResult?.total || "0"),
       totalCollected: parseFloat(collectedResult?.total || "0"),
