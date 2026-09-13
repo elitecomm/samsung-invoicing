@@ -42,9 +42,9 @@ export async function generateInvoicePDF(invoice: InvoiceWithItems): Promise<Buf
     const pageMargin = 40;
     const contentWidth = pageWidth - pageMargin * 2;
 
-    // Header
-    doc.rect(0, 0, pageWidth, 100).fill("#1428a0");
-    doc.fillColor("#ffffff").fontSize(26).font("Helvetica-Bold")
+    // Header (Changed from blue #1428a0 to clean light gray #f3f4f6 with dark text)
+    doc.rect(0, 0, pageWidth, 100).fill("#f3f4f6");
+    doc.fillColor("#111827").fontSize(26).font("Helvetica-Bold")
       .text("TAX INVOICE", pageMargin, 25, { width: contentWidth, align: "center" });
     doc.fontSize(16).font("Helvetica")
       .text(SERVICE_CENTER.name, pageMargin, 55, { width: contentWidth, align: "center" });
@@ -74,7 +74,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithItems): Promise<Buf
       .text(`Payment: ${invoice.paymentStatus.toUpperCase()}`, rightX, y + 75);
 
     y += 110;
-    doc.moveTo(pageMargin, y).lineTo(pageWidth - pageMargin, y).strokeColor("#1428a0").lineWidth(1).stroke();
+    doc.moveTo(pageMargin, y).lineTo(pageWidth - pageMargin, y).strokeColor("#cccccc").lineWidth(1).stroke();
     y += 15;
 
     // Customer info
@@ -106,20 +106,21 @@ export async function generateInvoicePDF(invoice: InvoiceWithItems): Promise<Buf
     doc.moveTo(pageMargin, y).lineTo(pageWidth - pageMargin, y).strokeColor("#dddddd").lineWidth(0.5).stroke();
     y += 15;
 
-    // Items table header
+    // Fixed Table Columns (Adjusted widths so Amount column stays within margins)
     const colSno = pageMargin;
-    const colDesc = pageMargin + 40;
-    const colQty = pageWidth - 200;
-    const colRate = pageWidth - 140;
-    const colAmount = pageWidth - 80;
+    const colDesc = pageMargin + 35;
+    const colQty = pageMargin + 280;
+    const colRate = pageMargin + 335;
+    const colAmount = pageMargin + 420;
 
-    doc.rect(pageMargin, y, contentWidth, 22).fill("#1428a0");
-    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(10);
-    doc.text("S.No", colSno + 5, y + 6, { width: 35 });
-    doc.text("Description", colDesc, y + 6, { width: 200 });
-    doc.text("Qty", colQty, y + 6, { width: 50, align: "center" });
-    doc.text("Rate", colRate, y + 6, { width: 50, align: "right" });
-    doc.text("Amount", colAmount, y + 6, { width: 60, align: "right" });
+    // Table Header (Light gray fill instead of blue)
+    doc.rect(pageMargin, y, contentWidth, 22).fill("#f3f4f6");
+    doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10);
+    doc.text("S.No", colSno + 5, y + 6, { width: 30 });
+    doc.text("Description", colDesc, y + 6, { width: 235 });
+    doc.text("Qty", colQty, y + 6, { width: 45, align: "center" });
+    doc.text("Rate", colRate, y + 6, { width: 75, align: "right" });
+    doc.text("Amount", colAmount, y + 6, { width: 75, align: "right" });
     y += 25;
 
     // Items
@@ -135,26 +136,16 @@ export async function generateInvoicePDF(invoice: InvoiceWithItems): Promise<Buf
       }
       const rowH = 20;
       if (idx % 2 === 0) {
-        doc.rect(pageMargin, y - 3, contentWidth, rowH).fill("#f8f9fa");
+        doc.rect(pageMargin, y - 3, contentWidth, rowH).fill("#f9fafb");
         doc.fillColor("#333333");
       }
-      doc.text(String(idx + 1), colSno + 5, y + 2, { width: 35 });
-      doc.text(item.description, colDesc, y + 2, { width: 200 });
-      doc.text(String(item.quantity), colQty, y + 2, { width: 50, align: "center" });
-      doc.text(`₹${Number(item.rate).toFixed(2)}`, colRate, y + 2, { width: 50, align: "right" });
-      doc.text(`₹${Number(item.amount).toFixed(2)}`, colAmount, y + 2, { width: 60, align: "right" });
+      doc.text(String(idx + 1), colSno + 5, y + 2, { width: 30 });
+      doc.text(item.description, colDesc, y + 2, { width: 235 });
+      doc.text(String(item.quantity), colQty, y + 2, { width: 45, align: "center" });
+      doc.text(`₹${Number(item.rate).toFixed(2)}`, colRate, y + 2, { width: 75, align: "right" });
+      doc.text(`₹${Number(item.amount).toFixed(2)}`, colAmount, y + 2, { width: 75, align: "right" });
       y += rowH;
     });
-
-    // Service charge row if items exist separately
-    if (invoice.items && invoice.items.length > 0 && Number(invoice.serviceCharge) > 0) {
-      doc.text(String(items.length + 1), colSno + 5, y + 2, { width: 35 });
-      doc.text("Service Charge", colDesc, y + 2, { width: 200 });
-      doc.text("1", colQty, y + 2, { width: 50, align: "center" });
-      doc.text(`₹${Number(invoice.serviceCharge).toFixed(2)}`, colRate, y + 2, { width: 50, align: "right" });
-      doc.text(`₹${Number(invoice.serviceCharge).toFixed(2)}`, colAmount, y + 2, { width: 60, align: "right" });
-      y += 20;
-    }
 
     y += 10;
     doc.moveTo(pageMargin, y).lineTo(pageWidth - pageMargin, y).strokeColor("#dddddd").lineWidth(0.5).stroke();
@@ -179,7 +170,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithItems): Promise<Buf
     }
     
     y += 2;
-    doc.moveTo(totalsX, y).lineTo(totalsX + totalsW, y).strokeColor("#1428a0").lineWidth(1.5).stroke();
+    doc.moveTo(totalsX, y).lineTo(totalsX + totalsW, y).strokeColor("#666666").lineWidth(1).stroke();
     y += 5;
     drawTotalsRow("TOTAL:", `₹${Number(invoice.total).toFixed(2)}`, true);
     drawTotalsRow("Paid:", `₹${Number(invoice.paid).toFixed(2)}`);
@@ -193,7 +184,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithItems): Promise<Buf
 
     // Warranty info
     if (invoice.warrantyDays) {
-      doc.fillColor("#1428a0").font("Helvetica-Bold").fontSize(10)
+      doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10)
         .text(`✓ Repair Warranty: ${invoice.warrantyDays} days from date of invoice`, pageMargin, y);
       if (invoice.warrantyExpiry) {
         doc.fillColor("#555555").font("Helvetica").fontSize(9)
