@@ -13,7 +13,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Credentials missing" }, { status: 400 });
     }
 
-    // If user entered email format like admin@elite.com, strip domain to match username column
     if (loginIdentifier.includes("@")) {
       loginIdentifier = loginIdentifier.split("@")[0];
     }
@@ -43,8 +42,12 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login route failure:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    // Expose error temporarily to diagnose database / connection issues
+    return NextResponse.json(
+      { error: error?.message || "Internal server error" }, 
+      { status: 500 }
+    );
   }
 }
