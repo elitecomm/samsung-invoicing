@@ -39,36 +39,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(data.user);
           localStorage.setItem("auth_user", JSON.stringify(data.user));
         } else {
-          const stored = localStorage.getItem("auth_user");
-          if (stored) {
-            try {
-              setUser(JSON.parse(stored));
-            } catch {
-              localStorage.removeItem("auth_user");
-            }
-          }
+          // API returned 200 but no user -> clear
+          setUser(null);
+          localStorage.removeItem("auth_user");
         }
       } else {
-        const stored = localStorage.getItem("auth_user");
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            // Try to re-validate via login API? For now keep
-            setUser(parsed);
-          } catch {
-            localStorage.removeItem("auth_user");
-          }
-        }
+        // 401 -> not authenticated, clear everything
+        setUser(null);
+        localStorage.removeItem("auth_user");
+        // Also clear cookies client-side to be safe
+        document.cookie = "samsung_auth=; path=/; max-age=0";
+        document.cookie = "auth_role=; path=/; max-age=0";
+        document.cookie = "auth_user=; path=/; max-age=0";
       }
     } catch (error) {
       console.error("Auth check failed:", error);
+      // Only fallback to localStorage on network error, not on 401
       const stored = localStorage.getItem("auth_user");
       if (stored) {
         try {
           setUser(JSON.parse(stored));
         } catch {
           localStorage.removeItem("auth_user");
+          setUser(null);
         }
+      } else {
+        setUser(null);
       }
     } finally {
       setLoading(false);
