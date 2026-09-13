@@ -1,21 +1,18 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // Adjust path to your auth config
+import { cookies } from "next/headers";
 import { db } from "@/db";
 import { invoices } from "@/db/schema";
 import { sql, gte, lte, and } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
-    // 1. Authenticate using NextAuth server session
-    const session = await getServerSession(authOptions);
+    // 1. Authenticate using custom user_role cookie
+    const cookieStore = await cookies();
+    const userRole = cookieStore.get("user_role")?.value;
 
-    if (!session || !session.user) {
+    if (!userRole) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // Access user role from session directly
-    const userRole = session.user.role;
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "today"; // today, week, month, year, all
