@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, TrendingUp, DollarSign, AlertCircle, Clock } from "lucide-react";
+import { FileText, TrendingUp, DollarSign, AlertCircle, Clock, Shield, User, PlusCircle } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 
 interface DashboardStats {
   period: string;
@@ -18,6 +19,7 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
+  const { user, role, isAdmin } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [period, setPeriod] = useState("today");
   const [loading, setLoading] = useState(true);
@@ -87,8 +89,19 @@ export default function Dashboard() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Overview of your service center</p>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            Dashboard
+            <span className={`text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1.5 ${isAdmin ? "bg-amber-100 text-amber-800 border border-amber-200" : "bg-green-100 text-green-800 border border-green-200"}`}>
+              {isAdmin ? <Shield size={14} /> : <User size={14} />}
+              {role?.toUpperCase()} MODE
+            </span>
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Welcome, <span className="font-semibold capitalize">{user?.username}</span> • Overview of your service center • 
+            <span className={isAdmin ? " text-amber-600 font-medium" : " text-green-600 font-medium"}>
+              {isAdmin ? " Full Access - All Information" : " Limited Access - Create, View & Dashboard Only"}
+            </span>
+          </p>
         </div>
         <div className="flex gap-2">
           {["today", "week", "month", "year"].map((p) => (
@@ -104,6 +117,45 @@ export default function Dashboard() {
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Role Info Banner */}
+      <div className={`rounded-xl p-4 border ${isAdmin ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"}`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdmin ? "bg-amber-500" : "bg-green-500"}`}>
+            {isAdmin ? <Shield className="text-white" size={20} /> : <User className="text-white" size={20} />}
+          </div>
+          <div className="flex-1">
+            <h3 className={`font-semibold ${isAdmin ? "text-amber-900" : "text-green-900"}`}>
+              {isAdmin ? "Admin Mode - Full Access" : "User Mode - Limited Access"}
+            </h3>
+            <p className={`text-sm mt-1 ${isAdmin ? "text-amber-700" : "text-green-700"}`}>
+              {isAdmin 
+                ? "You have access to all information: Dashboard, Invoices, Customers, Reports, Settings, and all management features." 
+                : "You can create new invoices, view all invoices, and use the dashboard. Customers, Reports, and Settings are admin-only."}
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Link href="/invoices/new" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium ${isAdmin ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-green-600 text-white hover:bg-green-700"}`}>
+                <PlusCircle size={14} />
+                New Invoice
+              </Link>
+              <Link href="/invoices" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border hover:bg-gray-50">
+                <FileText size={14} />
+                View Invoices
+              </Link>
+              {isAdmin && (
+                <>
+                  <Link href="/customers" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border hover:bg-gray-50">
+                    Customers
+                  </Link>
+                  <Link href="/reports" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border hover:bg-gray-50">
+                    Reports
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

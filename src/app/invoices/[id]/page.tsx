@@ -6,14 +6,16 @@ import Link from "next/link";
 import { 
   ArrowLeft, FileDown, MessageCircle, Download, Printer, 
   Edit, Save, User, Phone, Briefcase, Wrench, Calendar,
-  CreditCard, CheckCircle, Clock, AlertCircle, Send
+  CreditCard, CheckCircle, Clock, AlertCircle, Send, Shield
 } from "lucide-react";
 import { formatINR, formatDate, formatShortDate, getStatusStyle } from "@/lib/utils";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function InvoiceDetail() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { isAdmin, permissions } = useAuth();
 
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,6 @@ export default function InvoiceDetail() {
   const [whatsappMessage, setWhatsappMessage] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // For edit mode
   const [editData, setEditData] = useState<any>(null);
 
   useEffect(() => {
@@ -63,7 +64,6 @@ export default function InvoiceDetail() {
     }
   };
 
-  // Generate WhatsApp message from template
   useEffect(() => {
     if (!invoice || !settings.whatsapp_message_template) return;
     
@@ -95,7 +95,6 @@ export default function InvoiceDetail() {
     setWhatsappMessage(msg);
   }, [invoice, settings]);
 
-  // Pre-generate PDF blob URL for download and sharing
   useEffect(() => {
     if (!invoice) return;
     fetch(`/api/invoices/${id}/pdf`)
@@ -127,15 +126,13 @@ export default function InvoiceDetail() {
   const sendViaWhatsapp = () => {
     if (!invoice) return;
     
-    // Clean phone number - ensure international format for wa.me
     let phone = invoice.mobile.replace(/\D/g, "");
-    if (phone.length === 10) phone = "91" + phone; // Default to India
+    if (phone.length === 10) phone = "91" + phone;
     if (!phone.startsWith("91") && phone.length === 12) phone = phone;
     
     const encodedMsg = encodeURIComponent(whatsappMessage);
     const whatsappUrl = `https://wa.me/${phone}?text=${encodedMsg}`;
     
-    // Download PDF first, then open WhatsApp
     downloadPDF();
     
     setTimeout(() => {
@@ -146,29 +143,6 @@ export default function InvoiceDetail() {
         "Tip: The PDF has been downloaded to your device's Downloads folder."
       );
     }, 500);
-  };
-
-  const shareViaNative = async () => {
-    if (!invoice || !pdfUrl) return;
-    
-    try {
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `Invoice_${invoice.invoiceNo}.pdf`, { type: "application/pdf" });
-      
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: `Invoice ${invoice.invoiceNo}`,
-          text: whatsappMessage,
-          files: [file],
-        });
-      } else {
-        sendViaWhatsapp();
-      }
-    } catch (error) {
-      console.error("Share error:", error);
-      sendViaWhatsapp();
-    }
   };
 
   const handlePrint = () => {
@@ -182,6 +156,10 @@ export default function InvoiceDetail() {
   };
 
   const handleSave = async () => {
+    if (!permissions?.canEditInvoices) {
+      alert("Only admin can edit invoices");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/invoices/${id}`, {
@@ -203,6 +181,10 @@ export default function InvoiceDetail() {
   };
 
   const handleDelete = async () => {
+    if (!permissions?.canDeleteInvoices) {
+      alert("Only admin can delete invoices");
+      return;
+    }
     if (!confirm("Delete this invoice? This cannot be undone.")) return;
     try {
       await fetch(`/api/invoices/${id}`, { method: "DELETE" });
@@ -213,6 +195,10 @@ export default function InvoiceDetail() {
   };
 
   const recordPayment = async () => {
+    if (!isAdmin) {
+      alert("Only admin can record payments");
+      return;
+    }
     const amount = prompt(`Enter payment amount (Balance: ₹${Number(invoice.balance).toFixed(2)}):`);
     if (!amount) return;
     
@@ -257,7 +243,6 @@ export default function InvoiceDetail() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link
@@ -267,11 +252,12 @@ export default function InvoiceDetail() {
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
               Invoice {invoice.invoiceNo}
+              {!isAdmin && <span className="text-sm font-normal bg-green-100 text-green-700 px-2.5 py-1 rounded-full">View Only</span>}
             </h1>
             <p className="text-gray-600 mt-1">
-              {formatDate(invoice.date)}
+              {formatDate(invoice.date)} • {isAdmin ? "Admin • Full Access" : "User • View Mode"}
             </p>
           </div>
         </div>
@@ -304,17 +290,23 @@ export default function InvoiceDetail() {
             <Printer size={16} />
             Print
           </button>
-          <button
-            onClick={() => setEditMode(!editMode)}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-          >
-            <Edit size={16} />
-            {editMode ? "Cancel" : "Edit"}
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+            >
+              <Edit size={16} />
+              {editMode ? "Cancel" : "Edit"}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg border" title="Edit - Admin only">
+              <Shield size={16} />
+              Edit (Admin)
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Status Badges */}
       <div className="flex gap-3 mb-6">
         <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${jobStyle.color}`}>
           Job: {jobStyle.label}
@@ -322,12 +314,15 @@ export default function InvoiceDetail() {
         <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${payStyle.color}`}>
           Payment: {payStyle.label}
         </span>
+        {!isAdmin && (
+          <span className="px-4 py-2 rounded-lg text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
+            User Mode: View Only
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Invoice Details */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Customer Info */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-900">
               <User size={20} />
@@ -369,7 +364,6 @@ export default function InvoiceDetail() {
             )}
           </div>
 
-          {/* Job Details */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-900">
               <Briefcase size={20} />
@@ -476,7 +470,6 @@ export default function InvoiceDetail() {
             )}
           </div>
 
-          {/* Items */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-900">
               <Wrench size={20} />
@@ -507,9 +500,7 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Payment Summary */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-900">
               <CreditCard size={20} />
@@ -556,7 +547,7 @@ export default function InvoiceDetail() {
               </div>
             </div>
             
-            {Number(invoice.balance) > 0 && (
+            {Number(invoice.balance) > 0 && isAdmin && (
               <button
                 onClick={recordPayment}
                 className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -565,9 +556,14 @@ export default function InvoiceDetail() {
                 Record Payment
               </button>
             )}
+            {Number(invoice.balance) > 0 && !isAdmin && (
+              <div className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg border text-sm">
+                <Shield size={16} />
+                Record Payment (Admin only)
+              </div>
+            )}
           </div>
 
-          {/* Warranty */}
           {invoice.warrantyDays && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-900">
@@ -602,7 +598,6 @@ export default function InvoiceDetail() {
             </div>
           )}
 
-          {/* Notes */}
           {invoice.notes && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold mb-2 text-blue-900">Notes</h2>
@@ -610,7 +605,6 @@ export default function InvoiceDetail() {
             </div>
           )}
 
-          {/* Payment History */}
           {invoice.payments && invoice.payments.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-900">
@@ -631,8 +625,7 @@ export default function InvoiceDetail() {
             </div>
           )}
 
-          {/* Actions */}
-          {editMode && (
+          {editMode && isAdmin && (
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
@@ -645,16 +638,22 @@ export default function InvoiceDetail() {
             </div>
           )}
 
-          <button
-            onClick={handleDelete}
-            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-          >
-            Delete Invoice
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={handleDelete}
+              className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+            >
+              Delete Invoice
+            </button>
+          ) : (
+            <div className="w-full px-4 py-2 bg-gray-100 text-gray-500 rounded-lg border text-sm text-center flex items-center justify-center gap-2">
+              <Shield size={16} />
+              Delete Invoice (Admin only)
+            </div>
+          )}
         </div>
       </div>
 
-      {/* WhatsApp Modal */}
       {showWhatsappModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full p-6">

@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Filter, Download, Eye, Edit, Trash2, FileText, MessageCircle, Plus } from "lucide-react";
+import { Search, Filter, Download, Eye, Edit, Trash2, FileText, MessageCircle, Plus, Shield } from "lucide-react";
 import { formatINR, formatDate, getStatusStyle } from "@/lib/utils";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function InvoicesList() {
+  const { isAdmin, permissions } = useAuth();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,10 @@ export default function InvoicesList() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!permissions?.canDeleteInvoices) {
+      alert("Only admin can delete invoices");
+      return;
+    }
     if (!confirm("Are you sure you want to delete this invoice? This cannot be undone.")) return;
     
     try {
@@ -52,6 +58,10 @@ export default function InvoicesList() {
   };
 
   const exportToCSV = () => {
+    if (!permissions?.canExportData) {
+      alert("Only admin can export data");
+      return;
+    }
     if (invoices.length === 0) {
       alert("No data to export");
       return;
@@ -91,19 +101,24 @@ export default function InvoicesList() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">All Invoices</h1>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            All Invoices
+            {!isAdmin && <span className="text-sm font-normal bg-green-100 text-green-700 px-2.5 py-1 rounded-full">User Mode • View Only</span>}
+          </h1>
           <p className="text-gray-600 mt-1">
-            {total} invoice{total !== 1 ? "s" : ""} found
+            {total} invoice{total !== 1 ? "s" : ""} found {isAdmin ? "• Full Access" : "• Create & View Only"}
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            <Download size={16} />
-            Export CSV
-          </button>
+          {isAdmin && (
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Download size={16} />
+              Export CSV
+            </button>
+          )}
           <Link
             href="/invoices/new"
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -242,13 +257,19 @@ export default function InvoicesList() {
                           >
                             <Eye size={16} />
                           </Link>
-                          <button
-                            onClick={() => handleDelete(inv.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {isAdmin ? (
+                            <button
+                              onClick={() => handleDelete(inv.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded"
+                              title="Delete (Admin only)"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          ) : (
+                            <span className="p-2 text-gray-300 cursor-not-allowed" title="Delete - Admin only">
+                              <Shield size={16} />
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
