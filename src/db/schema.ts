@@ -113,3 +113,13 @@ export const settings = pgTable("settings", {
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Users table (for Admin and General Staff role management)
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: varchar("username", { length: 100 }).notNull().unique(),
+  password: text("password").notNull(), // Stores hashed password
+  role: varchar("role", { length: 20 }).default("staff").notNull(), // 'admin' or 'staff'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

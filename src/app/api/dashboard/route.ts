@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { invoices, payments, invoiceItems } from "@/db/schema";
 import { sql, eq, gte, lte, and } from "drizzle-orm";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   try {
+    // Await cookies() for modern Next.js App Router compatibility
+    const cookieStore = await cookies();
+    const userRole = cookieStore.get("user_role")?.value;
+
+    if (!userRole) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "today"; // today, week, month, year, all
 

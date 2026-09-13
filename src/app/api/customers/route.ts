@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { customers } from "@/db/schema";
 import { eq, desc, sql, or, like } from "drizzle-orm";
 import { z } from "zod";
+import { cookies } from "next/headers";
 
 const customerSchema = z.object({
   name: z.string().min(1),
@@ -14,6 +15,14 @@ const customerSchema = z.object({
 
 export async function GET(request: Request) {
   try {
+    // Ensure the user is authenticated (Admin or General Staff can view)
+    const cookieStore = await cookies();
+    const userRole = cookieStore.get("user_role")?.value;
+
+    if (!userRole) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     
@@ -38,6 +47,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Ensure the user is authenticated (Admin or General Staff can create)
+    const cookieStore = await cookies();
+    const userRole = cookieStore.get("user_role")?.value;
+
+    if (!userRole) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const validated = customerSchema.parse(body);
 

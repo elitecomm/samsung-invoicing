@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { FileText, Home, Users, BarChart3, Settings, PlusCircle } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { FileText, Home, Users, BarChart3, Settings, PlusCircle, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
@@ -16,6 +16,13 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <aside className="w-64 bg-gradient-to-b from-blue-900 to-blue-800 text-white flex flex-col">
@@ -47,9 +54,20 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-blue-700 text-xs text-blue-200">
-        <p>Elite Communication</p>
-        <p>Varanasi</p>
+      {/* Logout Button Section */}
+      <div className="p-4 border-t border-blue-700 space-y-3">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-200 hover:bg-red-600/20 hover:text-white transition-colors w-full font-medium"
+        >
+          <LogOut size={20} />
+          <span>Logout</span>
+        </button>
+
+        <div className="text-xs text-blue-200 pt-2 border-t border-blue-700/50">
+          <p className="font-semibold">Elite Communication</p>
+          <p>Varanasi</p>
+        </div>
       </div>
     </aside>
   );
