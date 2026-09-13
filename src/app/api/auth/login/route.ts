@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
@@ -16,12 +16,7 @@ export async function POST(request: Request) {
     const [user] = await db
       .select()
       .from(users)
-      .where(
-        or(
-          eq(users.email, loginIdentifier),
-          eq(users.username, loginIdentifier)
-        )
-      )
+      .where(eq(users.username, loginIdentifier))
       .limit(1);
 
     if (!user || password !== user.password) {
@@ -30,7 +25,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ 
       success: true, 
-      user: { id: user.id, email: user.email, role: user.role } 
+      user: { id: user.id, username: user.username, role: user.role } 
     });
 
     response.cookies.set({
