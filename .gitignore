@@ -9,3 +9,4 @@ dist
 tsconfig.tsbuildinfo
 next-env.d.ts
 
+offline-dist/
