@@ -6,11 +6,16 @@ import { eq } from "drizzle-orm";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const loginIdentifier = body.username || body.email;
+    let loginIdentifier = (body.username || body.email || "").trim();
     const password = body.password;
 
     if (!loginIdentifier || !password) {
       return NextResponse.json({ error: "Credentials missing" }, { status: 400 });
+    }
+
+    // If user entered email format like admin@elite.com, strip domain to match username column
+    if (loginIdentifier.includes("@")) {
+      loginIdentifier = loginIdentifier.split("@")[0];
     }
 
     const [user] = await db
